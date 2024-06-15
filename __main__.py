@@ -126,7 +126,7 @@ ray status
 
 # Create the head node
 head_node = aws.ec2.Instance('head-node',
-    instance_type='t2.micro',
+    instance_type='t2.medium',
     ami='ami-003c463c8207b4dfa',  # Replace with the correct AMI ID
     vpc_security_group_ids=[security_group.id],  # Replace with your security group ID
     subnet_id=subnet.id,  # Replace with your subnet ID
@@ -153,7 +153,7 @@ pip install ray
 ray start --address='{ip}:6379' --heartbeat-timeout-milliseconds=60000
 """)
     worker_node = aws.ec2.Instance(f'worker-node-{i}',
-        instance_type='t2.micro',
+        instance_type='t2.medium',
         ami='ami-003c463c8207b4dfa',  # Replace with the correct AMI ID
         vpc_security_group_ids=[security_group.id],  # Replace with your security group ID
         subnet_id=subnet.id,  # Replace with your subnet ID
