@@ -58,6 +58,12 @@ security_group = aws.ec2.SecurityGroup("my-sec-group",
             to_port=443,
             cidr_blocks=["0.0.0.0/0"],
         ),
+        aws.ec2.SecurityGroupIngressArgs(
+            protocol='tcp',
+            from_port=6379,
+            to_port=6379,
+            cidr_blocks=['0.0.0.0/0'],  # Allow from anywhere
+        ),
     ],
     egress=[
         aws.ec2.SecurityGroupEgressArgs(
@@ -79,41 +85,87 @@ Thus, making it the head node.
 Thus, making it a worker node.
 '''
 
-# User data to install Ray and start/connect to the Ray cluster
-# User data to install Ray in a virtual environment and start/connect to the Ray cluster
-user_data = """#!/bin/bash
+# # Create EC2 Instances at once (not feasible for this scenario)
+# instances = []
+# for i in range(3):
+#     instance = aws.ec2.Instance(f"my-instance-{i+1}",
+#         instance_type="t2.micro",
+#         vpc_security_group_ids=[security_group.id],
+#         ami="ami-003c463c8207b4dfa", # Use an appropriate Ubuntu AMI ID for your region
+#         subnet_id=subnet.id,
+#         user_data=user_data,
+#         key_name="key-pair-poridhi-poc"  # Make sure to create a key pair and replace this with your key pair name
+#     )
+#     instances.append(instance)
+
+# # Export the instance public IPs
+# for i, instance in enumerate(instances):
+#     pulumi.export(f"instance_{i+1}_public_ip", instance.public_ip)
+
+# NEW CODE STARTS HERE
+
+# User data to install Python 3.9, create a virtual environment, and install Ray
+head_node_user_data = """#!/bin/bash
 sudo apt-get update
-sudo apt-get install -y python3-venv
-python3 -m venv ray_env
+sudo apt-get install -y software-properties-common
+sudo add-apt-repository -y ppa:deadsnakes/ppa
+sudo apt-get update
+sudo apt-get install -y python3.9 python3.9-venv python3.9-dev
+
+python3.9 -m venv ray_env
 source ray_env/bin/activate
+pip install --upgrade pip
 pip install ray
 
-# Get the private IP of the current instance
-PRIVATE_IP=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
+# Start the Ray cluster
+ray start --head --port=6379
 
-# If this is the first instance (the head node)
-if [ "$PRIVATE_IP" == "your_first_instance_private_ip" ]; then
-    # Start the Ray cluster
-    ray start --head --port=6379
-else
-    # This is a worker node, so connect to the Ray cluster
-    ray start --address='your_first_instance_private_ip:6379'
-fi
+# Print the status of the Ray cluster
+ray status
 """
 
-# Create EC2 Instances
-instances = []
-for i in range(3):
-    instance = aws.ec2.Instance(f"my-instance-{i+1}",
-        instance_type="t2.micro",
-        vpc_security_group_ids=[security_group.id],
-        ami="ami-003c463c8207b4dfa", # Use an appropriate Ubuntu AMI ID for your region
-        subnet_id=subnet.id,
-        user_data=user_data,
-        key_name="key-pair-poridhi-poc"  # Make sure to create a key pair and replace this with your key pair name
-    )
-    instances.append(instance)
+# Create the head node
+head_node = aws.ec2.Instance('head-node',
+    instance_type='t2.micro',
+    ami='ami-003c463c8207b4dfa',  # Replace with the correct AMI ID
+    vpc_security_group_ids=[security_group.id],  # Replace with your security group ID
+    subnet_id=subnet.id,  # Replace with your subnet ID
+    user_data=head_node_user_data,
+    key_name='key-pair-poridhi-poc'  # Replace with your key pair name
+)
 
-# Export the instance public IPs
-for i, instance in enumerate(instances):
-    pulumi.export(f"instance_{i+1}_public_ip", instance.public_ip)
+# Create the worker nodes
+worker_nodes = []
+for i in range(2):  # Replace 2 with the number of worker nodes
+    worker_node_user_data = head_node.private_ip.apply(lambda ip: f"""#!/bin/bash
+sudo apt-get update
+sudo apt-get install -y software-properties-common
+sudo add-apt-repository -y ppa:deadsnakes/ppa
+sudo apt-get update
+sudo apt-get install -y python3.9 python3.9-venv python3.9-dev
+
+python3.9 -m venv ray_env
+source ray_env/bin/activate
+pip install --upgrade pip
+pip install ray
+
+# Connect to the Ray cluster
+ray start --address='{ip}:6379' --heartbeat-timeout-milliseconds=60000
+""")
+    worker_node = aws.ec2.Instance(f'worker-node-{i}',
+        instance_type='t2.micro',
+        ami='ami-003c463c8207b4dfa',  # Replace with the correct AMI ID
+        vpc_security_group_ids=[security_group.id],  # Replace with your security group ID
+        subnet_id=subnet.id,  # Replace with your subnet ID
+        user_data=worker_node_user_data,
+        key_name='key-pair-poridhi-poc'  # Replace with your key pair name
+    )
+    worker_nodes.append(worker_node)
+
+# Output the private IP addresses
+pulumi.export('head_node_private_ip', head_node.private_ip)
+for i, worker_node in enumerate(worker_nodes):
+    pulumi.export(f'worker_node_{i}_private_ip', worker_node.private_ip)
+
+
+    # source /ray_env/bin/activate
