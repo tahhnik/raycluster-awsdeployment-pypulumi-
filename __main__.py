@@ -80,10 +80,13 @@ Thus, making it a worker node.
 '''
 
 # User data to install Ray and start/connect to the Ray cluster
+# User data to install Ray in a virtual environment and start/connect to the Ray cluster
 user_data = """#!/bin/bash
 sudo apt-get update
-sudo apt-get install -y python3-pip
-pip3 install ray
+sudo apt-get install -y python3-venv
+python3 -m venv ray_env
+source ray_env/bin/activate
+pip install ray
 
 # Get the private IP of the current instance
 PRIVATE_IP=$(curl http://169.254.169.254/latest/meta-data/local-ipv4)
