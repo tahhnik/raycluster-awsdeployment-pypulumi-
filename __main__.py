@@ -61,21 +61,21 @@ security_group = aws.ec2.SecurityGroup("my-sec-group",
         aws.ec2.SecurityGroupIngressArgs(
             protocol='tcp',
             from_port=6379,
-            to_port=6379,
+            to_port=6382,
             cidr_blocks=['0.0.0.0/0'],  # Allow from anywhere
         ),
         aws.ec2.SecurityGroupIngressArgs(
             protocol='tcp',
-            from_port=8265,
-            to_port=8265,
+            from_port=1024,
+            to_port=65535,
             cidr_blocks=['0.0.0.0/0'],
         ),
-        aws.ec2.SecurityGroupIngressArgs(
-            protocol='tcp',
-            from_port=8076,
-            to_port=8076,
-            cidr_blocks=['0.0.0.0/0'],
-        ),
+        # aws.ec2.SecurityGroupIngressArgs(
+        #     protocol='tcp',
+        #     from_port=8076,
+        #     to_port=8076,
+        #     cidr_blocks=['0.0.0.0/0'],
+        # ),
     ],
     egress=[
         aws.ec2.SecurityGroupEgressArgs(
