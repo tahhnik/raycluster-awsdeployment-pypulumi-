@@ -64,6 +64,18 @@ security_group = aws.ec2.SecurityGroup("my-sec-group",
             to_port=6379,
             cidr_blocks=['0.0.0.0/0'],  # Allow from anywhere
         ),
+        aws.ec2.SecurityGroupIngressArgs(
+            protocol='tcp',
+            from_port=8265,
+            to_port=8265,
+            cidr_blocks=['0.0.0.0/0'],
+        ),
+        aws.ec2.SecurityGroupIngressArgs(
+            protocol='tcp',
+            from_port=8076,
+            to_port=8076,
+            cidr_blocks=['0.0.0.0/0'],
+        ),
     ],
     egress=[
         aws.ec2.SecurityGroupEgressArgs(
@@ -72,7 +84,7 @@ security_group = aws.ec2.SecurityGroup("my-sec-group",
             to_port=0,
             cidr_blocks=["0.0.0.0/0"],
         ),
-    ]
+    ],
 )
 
 '''
@@ -107,58 +119,74 @@ Thus, making it a worker node.
 # User data to install Python 3.9, create a virtual environment, and install Ray
 head_node_user_data = """#!/bin/bash
 sudo apt-get update
-sudo apt-get install -y software-properties-common
-sudo add-apt-repository -y ppa:deadsnakes/ppa
-sudo apt-get update
-sudo apt-get install -y python3.9 python3.9-venv python3.9-dev
+# sudo apt-get install -y software-properties-common
+# sudo add-apt-repository -y ppa:deadsnakes/ppa
+# sudo apt-get update
+# sudo apt-get install -y python3.9 python3.9-venv python3.9-dev
 
-python3.9 -m venv ray_env
-source ray_env/bin/activate
-pip install --upgrade pip
-pip install ray
+# python3.9 -m venv ray_env
+# source ray_env/bin/activate
+# pip install --upgrade pip
+# pip install -U "ray[default]"
 
 # Start the Ray cluster
-ray start --head --port=6379
+# ray start --head --port=6379 --dashboard-port 8265
 
 # Print the status of the Ray cluster
-ray status
+# ray status
 """
 
 # Create the head node
 head_node = aws.ec2.Instance('head-node',
-    instance_type='t2.medium',
+    instance_type='t2.xlarge',
     ami='ami-003c463c8207b4dfa',  # Replace with the correct AMI ID
     vpc_security_group_ids=[security_group.id],  # Replace with your security group ID
     subnet_id=subnet.id,  # Replace with your subnet ID
     user_data=head_node_user_data,
-    key_name='key-pair-poridhi-poc'  # Replace with your key pair name
+    key_name='key-pair-poridhi-poc',  # Replace with your key pair name
+    ebs_block_devices=[
+        aws.ec2.InstanceEbsBlockDeviceArgs(
+            device_name="/dev/sda1",
+            volume_type="gp3",
+            volume_size=100,  # Size in GB
+            delete_on_termination=True,
+        ),
+    ],
 )
 
 # Create the worker nodes
 worker_nodes = []
-for i in range(2):  # Replace 2 with the number of worker nodes
+for i in range(1):  # Replace 2 with the number of worker nodes
     worker_node_user_data = head_node.private_ip.apply(lambda ip: f"""#!/bin/bash
 sudo apt-get update
-sudo apt-get install -y software-properties-common
-sudo add-apt-repository -y ppa:deadsnakes/ppa
-sudo apt-get update
-sudo apt-get install -y python3.9 python3.9-venv python3.9-dev
+# sudo apt-get install -y software-properties-common
+# sudo add-apt-repository -y ppa:deadsnakes/ppa
+# sudo apt-get update
+# sudo apt-get install -y python3.9 python3.9-venv python3.9-dev
 
-python3.9 -m venv ray_env
-source ray_env/bin/activate
-pip install --upgrade pip
-pip install ray
+# python3.9 -m venv ray_env
+# source ray_env/bin/activate
+# pip install --upgrade pip
+# pip install ray
 
 # Connect to the Ray cluster
-ray start --address='{ip}:6379' --heartbeat-timeout-milliseconds=60000
+# ray start --address='{ip}:6379' 
 """)
     worker_node = aws.ec2.Instance(f'worker-node-{i}',
-        instance_type='t2.medium',
+        instance_type='t2.xlarge',
         ami='ami-003c463c8207b4dfa',  # Replace with the correct AMI ID
         vpc_security_group_ids=[security_group.id],  # Replace with your security group ID
         subnet_id=subnet.id,  # Replace with your subnet ID
         user_data=worker_node_user_data,
-        key_name='key-pair-poridhi-poc'  # Replace with your key pair name
+        key_name='key-pair-poridhi-poc',  # Replace with your key pair name
+        ebs_block_devices=[
+            aws.ec2.InstanceEbsBlockDeviceArgs(
+            device_name="/dev/sda1",
+            volume_type="gp3",
+            volume_size=100,  # Size in GB
+            delete_on_termination=True,
+            ),
+        ],
     )
     worker_nodes.append(worker_node)
 
