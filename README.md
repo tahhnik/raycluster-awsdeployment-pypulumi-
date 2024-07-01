@@ -2,7 +2,8 @@
 
 ## Overview
 
-This repository provides infrastructure-as-code (IaC) templates to deploy the cloud architecture described in the diagram. We'll use Pulumi to automate the provisioning of resources in your AWS environment.
+This repository provides infrastructure-as-code (IaC) template to deploy the cloud architecture needed to set up Ray Cluster described in the diagram. 
+We'll use Pulumi to automate the provisioning of resources which are needed to set up a multi-node Ray Cluster in your AWS environment.
 ![diagram-export-6-22-2024-11_17_40-PM](https://github.com/tahhnik/raycluster-awsdeployment-pypulumi/assets/25973761/df25f489-329a-447a-af2e-bfb26c870cb3)
 
 ## Prerequisites
@@ -19,7 +20,8 @@ This repository provides infrastructure-as-code (IaC) templates to deploy the cl
 
 Pulumi is an open-source infrastructure-as-code software that allows users to manage cloud infrastructure resources using programming languages such as Go, JavaScript, TypeScript, Python, Java, C#, and YAML. It supports deployment to various cloud providers like AWS, Azure, Google Cloud, and Kubernetes
 
-![Untitled](https://prod-files-secure.s3.us-west-2.amazonaws.com/f5c52978-7a2e-47f8-b3f7-e77429aab32f/f2f75d87-b8e8-4c7d-9465-a04169e85bd6/Untitled.png)
+![image](https://github.com/tahhnik/raycluster-awsdeployment-pypulumi/assets/25973761/1cb23ef6-a0f6-4005-8bc0-caeabd496780)
+
 
 ## **Step 1: Install Pulumi**
 
@@ -50,7 +52,8 @@ To set up a Pulumi Cloud account and log in to the CLI, follow these steps:
     You can find your account’s personal access tokens on the below section,
     
 
-![Untitled](https://prod-files-secure.s3.us-west-2.amazonaws.com/f5c52978-7a2e-47f8-b3f7-e77429aab32f/86715189-311e-4170-9a07-ed00a738ff78/Untitled.png)
+![image](https://github.com/tahhnik/raycluster-awsdeployment-pypulumi/assets/25973761/057794aa-46a2-479f-9412-71e45af90f32)
+
 
 ### 3.2: Configure Your Pulumi CLI
 
@@ -76,3 +79,7 @@ To set up a Pulumi Cloud account and log in to the CLI, follow these steps:
     ```
     
     This command will display information about your Pulumi CLI, including your backend, user, and organizations.
+
+# Follow rest of the instructions on the Lab Prompt to Finish setting up the Infrastructure Deployment
+
+
